@@ -175,12 +175,12 @@ rhmg/
 │   │   └── registry.py          # ChannelRegistry - factory for channel instances
 │   │
 │   ├── schemas/                  # Pydantic request/response schemas
-│   │   ├── __init__.py
 │   │   ├── message.py            # CreateMessageRequest, MessageResponse
 │   │   └── message_event.py      # Event schema for JSON serialization
 │   │
 │   ├── workers/                  # Background job processing
 │   │   ├── __init__.py
+│   │   ├── events.py             # Lifecycle event recorder and event constants
 │   │   ├── processor.py          # MessageProcessor - core state transitions, delivery logic
 │   │   └── scheduler.py          # MessageScheduler - periodic task runner
 │   │
@@ -1281,7 +1281,7 @@ Each commit represents a logical feature or component:
 3. **Database Layer** - SQLAlchemy async ORM
 4. **Retry Policy** - Exponential backoff with jitter
 5. **Message Processor** - Core business logic
-6. **Delivery Channels** - Telegram, Mock, extensible registry
+6. **Delivery Channels** - Telegram Bot API and extensible registry
 7. **Background Scheduler** - Periodic task runner
 8. **HTTP API** - Message submission, acknowledgement, health
 9. **Observability** - Structured logging, metrics, health checks
@@ -1295,7 +1295,7 @@ Each commit represents a logical feature or component:
 6. ✅ Health checks & metrics endpoints
 
 ### Not Yet Implemented (for remaining 50%)
-- Real Telegram Bot API integration (using Mock)
+- Additional delivery channels beyond Telegram
 - Redis Streams for distributed work queues
 - Circuit breaker pattern for fault tolerance
 - Cascading fallback logic (try SMS, then Email, etc.)
@@ -1309,10 +1309,10 @@ Each commit represents a logical feature or component:
 
 ## Actual Local Git History
 
-The repository was initialized locally on `main` with **59 focused commits**. Each commit adds one real project file or a closely scoped foundation file, and each commit message explains the responsibility introduced by that file. This is intentionally more granular than the original 16-stage feature plan so the history can be reviewed and pushed incrementally.
+The repository was initialized locally on `main` with **60 focused commits**. Each commit adds one real project file or a closely scoped foundation file, and each commit message explains the responsibility introduced by that file. This is intentionally more granular than the original 16-stage feature plan so the history can be reviewed and pushed incrementally.
 
 The remote is configured as:
 
 `https://github.com/betelhem16/Resilient-Hybrid-Messaging-Gateway.git`
 
-No commit has been pushed yet. The complete local history should be reviewed before the first push.
+The complete local history has been pushed to the public `main` branch. The test suite currently reports 27 passing tests.
