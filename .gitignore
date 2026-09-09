@@ -9,3 +9,4 @@ venv/
 *.egg-info/
 .coverage
 htmlcov/
+test_results.txt
