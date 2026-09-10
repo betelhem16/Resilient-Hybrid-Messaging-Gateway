@@ -343,3 +343,54 @@ async def test_deadline_check_escalates_when_ack_deadline_passes(test_session: A
     assert updated is not None
     assert updated.current_state == MessageState.ESCALATION_PENDING
     assert updated.escalated_at is not None
+
+
+@pytest.mark.asyncio
+async def test_failed_fallback_schedules_retry_and_recovers(test_session: AsyncSession) -> None:
+    """A temporary fallback failure should be deferred, then recover on retry."""
+    registry = ChannelRegistry()
+    mock_telegram = MockChannel("telegram", always_succeed=False)
+    mock_sms = MockChannel("sms", always_succeed=False)
+    registry.register("telegram", mock_telegram)
+    registry.register("sms", mock_sms)
+
+    service = MessageService(test_session, registry)
+
+    from app.schemas.message import CreateMessageRequest
+
+    request = CreateMessageRequest(
+        sender="alerts",
+        recipient="123456789",
+        content="Retry test",
+        primary_channel="telegram",
+        acknowledgement_condition="EXPLICIT_ACK",
+        acknowledgement_deadline_seconds=600,
+        fallback_channels=["sms"],
+        priority="NORMAL",
+    )
+
+    record = await service.create_message(request)
+    await test_session.commit()
+    await service.process_message(record.id)
+    await test_session.commit()
+
+    await service.processor.attempt_fallback(record.id, "sms")
+    await test_session.commit()
+
+    deferred = await service.get_message(record.id)
+    assert deferred is not None
+    assert deferred.current_state == MessageState.ESCALATION_DEFERRED
+    assert deferred.retry_count == 1
+    assert deferred.next_retry_at is not None
+    assert deferred.next_retry_at > datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Simulate the scheduler making the deferred message eligible again.
+    await service.processor._escalate_message(deferred, datetime.now(timezone.utc))
+    mock_sms.always_succeed = True
+    await service.processor.attempt_fallback(record.id, "sms")
+    await test_session.commit()
+
+    recovered = await service.get_message(record.id)
+    assert recovered is not None
+    assert recovered.current_state == MessageState.FALLBACK_DELIVERED
+    assert mock_sms.call_count == 2

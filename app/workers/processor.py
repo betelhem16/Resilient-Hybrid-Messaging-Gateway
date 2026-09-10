@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.channels.registry import ChannelRegistry
 from app.domain.message import MessageRecord
 from app.domain.message_state import MessageState
+from app.domain.retry_policy import FALLBACK_RETRY_POLICY
 from app.domain.state_machine import apply_transition, StateTransitionError
 from app.repositories.message_repository import MessageRepository
 from app.workers.events import EventRecorder, EventType
@@ -358,11 +359,38 @@ class MessageProcessor:
             )
             logger.info(f"Message {message_id} delivered via fallback: {channel_name}")
         else:
-            await self._mark_dead_letter(
-                message,
-                f"fallback send failed: {result.error or 'unknown'}",
-                now,
-            )
+            message.last_error = f"fallback send failed: {result.error or 'unknown'}"
+            message.retry_count += 1
+
+            if FALLBACK_RETRY_POLICY.should_retry(message.retry_count):
+                message.next_retry_at = FALLBACK_RETRY_POLICY.next_retry_at(
+                    message.retry_count - 1,
+                    now,
+                )
+                try:
+                    apply_transition(message, MessageState.ESCALATION_DEFERRED, now=now)
+                except StateTransitionError as exc:
+                    logger.error(f"Cannot defer fallback retry for {message_id}: {exc}")
+                    return
+
+                await self.repository.update(message)
+                await self.events.record(
+                    message_id,
+                    EventType.ESCALATION_DEFERRED,
+                    {
+                        "channel": channel_name,
+                        "retry_count": message.retry_count,
+                        "next_retry_at": message.next_retry_at.isoformat(),
+                        "error": message.last_error,
+                    },
+                )
+                logger.info(
+                    "Fallback retry scheduled for %s at %s",
+                    message_id,
+                    message.next_retry_at.isoformat(),
+                )
+            else:
+                await self._mark_dead_letter(message, message.last_error, now)
 
     async def _mark_failed(
         self,
