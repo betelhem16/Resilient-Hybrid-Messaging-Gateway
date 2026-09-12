@@ -49,6 +49,15 @@ class MessageRepository:
             return None
         return self._to_record(db_message)
 
+    async def get_by_idempotency_key(self, key: str) -> MessageRecord | None:
+        result = await self.session.execute(
+            select(Message).where(Message.idempotency_key == key)
+        )
+        db_message = result.scalar_one_or_none()
+        if db_message is None:
+            return None
+        return self._to_record(db_message)
+
     def _to_record(self, db_message: Message) -> MessageRecord:
         return MessageRecord(
             id=db_message.id,

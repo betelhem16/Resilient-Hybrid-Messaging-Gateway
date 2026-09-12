@@ -394,3 +394,30 @@ async def test_failed_fallback_schedules_retry_and_recovers(test_session: AsyncS
     assert recovered is not None
     assert recovered.current_state == MessageState.FALLBACK_DELIVERED
     assert mock_sms.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_idempotency_key_returns_existing_message(test_session: AsyncSession) -> None:
+    """Repeated submissions with one key must not create duplicate messages."""
+    registry = ChannelRegistry()
+    service = MessageService(test_session, registry)
+
+    from app.schemas.message import CreateMessageRequest
+
+    request = CreateMessageRequest(
+        sender="alerts",
+        recipient="123456789",
+        content="Duplicate-safe alert",
+        primary_channel="telegram",
+        acknowledgement_condition="EXPLICIT_ACK",
+        acknowledgement_deadline_seconds=600,
+        fallback_channels=[],
+        idempotency_key="alert-123",
+        priority="NORMAL",
+    )
+
+    first = await service.create_message(request)
+    await test_session.commit()
+    second = await service.create_message(request)
+
+    assert second.id == first.id

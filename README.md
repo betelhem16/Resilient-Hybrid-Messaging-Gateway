@@ -9,6 +9,7 @@ The project is designed for systems where delivery reliability, traceability, an
 - Asynchronous FastAPI HTTP API
 - Message lifecycle state machine with validated transitions
 - Primary-channel delivery with acknowledgement tracking
+- Idempotent message submission using a unique request key
 - Deadline-based escalation to fallback channels
 - Exponential retry backoff with jitter
 - Immutable message event history for auditing and debugging

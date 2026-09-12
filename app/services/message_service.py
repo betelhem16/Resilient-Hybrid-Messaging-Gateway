@@ -26,6 +26,11 @@ class MessageService:
         self.processor = MessageProcessor(session, channels)
 
     async def create_message(self, payload: CreateMessageRequest) -> MessageRecord:
+        if payload.idempotency_key:
+            existing = await self.repository.get_by_idempotency_key(payload.idempotency_key)
+            if existing is not None:
+                return existing
+
         message_id = str(uuid4())
         now = datetime.now(timezone.utc)
 

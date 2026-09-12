@@ -40,7 +40,9 @@ class Message(Base):
     escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ack_deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    idempotency_key: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, unique=True, index=True
+    )
     external_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -24,8 +24,9 @@ async def create_message(
     await session.commit()
 
     # Kick off processing immediately (in production, this would be async via a queue)
-    await service.process_message(record.id)
-    await session.commit()
+    if record.current_state.value == "PENDING":
+        await service.process_message(record.id)
+        await session.commit()
 
     return MessageResponse.from_record(record)
 
