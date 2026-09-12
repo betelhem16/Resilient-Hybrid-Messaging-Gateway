@@ -253,7 +253,6 @@ The current milestone includes the core delivery workflow, deadline escalation, 
 
 Planned production hardening includes:
 
-- Authentication and authorization for administrative endpoints
 - Additional delivery channels and cascading fallback policies
 - Redis Streams for distributed workers
 - Circuit breakers and rate limiting
