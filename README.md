@@ -194,7 +194,13 @@ GET /messages/{message_id}
 | `GET /admin/messages/{id}/events` | View a message audit trail |
 | `GET /admin/stats` | View message counts by state |
 
-> Admin endpoints are intended for local operations and debugging. Authentication and authorization are part of the production hardening roadmap.
+Admin endpoints are open in local development when `RHMG_ADMIN_API_KEY` is empty. Set this value in production and send it with every admin request:
+
+```http
+X-Admin-API-Key: your-secret-key
+```
+
+Production admin access fails closed when no key is configured.
 
 ## Retry and Escalation
 
@@ -217,6 +223,7 @@ RHMG_DATABASE_URL=postgresql+asyncpg://rhmg:rhmg_local_dev_only@postgres:5432/rh
 RHMG_REDIS_URL=redis://redis:6379/0
 RHMG_ENV=local
 RHMG_LOG_LEVEL=INFO
+RHMG_ADMIN_API_KEY=
 RHMG_TELEGRAM_BOT_TOKEN=
 ```
 

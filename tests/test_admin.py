@@ -3,14 +3,38 @@
 import pytest
 from datetime import datetime, timezone, timedelta
 from httpx import AsyncClient
+from types import SimpleNamespace
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException
 
 from app.channels.registry import ChannelRegistry
+from app.api.routes.admin import require_admin_access
 from app.domain.message_state import MessageState
 from app.main import create_app
 from app.schemas.message import CreateMessageRequest
 from app.services.message_service import MessageService
 from tests.test_message_processor import MockChannel
+
+
+@pytest.mark.asyncio
+async def test_admin_access_requires_configured_production_key() -> None:
+    def make_request(env: str, key: str) -> SimpleNamespace:
+        settings = SimpleNamespace(env=env, admin_api_key=key)
+        return SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(settings=settings)))
+
+    await require_admin_access(make_request("local", ""))
+    await require_admin_access(
+        make_request("prod", "secret"),
+        "secret",
+    )
+
+    with pytest.raises(HTTPException) as invalid_key:
+        await require_admin_access(make_request("prod", "secret"), "wrong")
+    assert invalid_key.value.status_code == 401
+
+    with pytest.raises(HTTPException) as missing_key:
+        await require_admin_access(make_request("prod", ""))
+    assert missing_key.value.status_code == 503
 
 
 @pytest.fixture

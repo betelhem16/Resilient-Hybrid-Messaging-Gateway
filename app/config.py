@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     redis_url: str
 
     telegram_bot_token: str = ""
+    admin_api_key: str = ""
 
     # Named here so Day 2+ code never hardcodes the stream/group identifiers.
     message_stream: str = "rhmg:messages"

@@ -7,17 +7,40 @@ and should be gated behind authentication in production.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import Settings
 from app.domain.message_state import MessageState
 from app.infrastructure.database import get_session
 from app.infrastructure.models import Message, MessageEvent
 from app.repositories.message_repository import MessageRepository
 from app.schemas.message import MessageResponse
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+async def require_admin_access(
+    request: Request,
+    x_admin_api_key: str | None = Header(default=None),
+) -> None:
+    """Require the configured admin key in production and when configured."""
+    settings: Settings = request.app.state.settings
+    if not settings.admin_api_key and settings.env == "prod":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="admin API key is not configured",
+        )
+    if settings.admin_api_key and x_admin_api_key != settings.admin_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid admin API key",
+        )
+
+
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(require_admin_access)],
+)
 
 
 @router.get("/messages", status_code=status.HTTP_200_OK)
