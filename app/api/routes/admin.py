@@ -161,17 +161,19 @@ async def manually_escalate_message(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
 
     updated = await repository.get_by_id(message_id)
+    if updated is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="message not found")
     return MessageResponse.from_record(updated)
 
 
 @router.post("/messages/{message_id}/retry-fallback", status_code=status.HTTP_200_OK)
 async def retry_fallback_delivery(
     message_id: str,
+    request: Request,
     channel: str = Query(..., description="Fallback channel to attempt"),
-    request: Request = ...,
     session: AsyncSession = Depends(get_session),
 ) -> MessageResponse:
     """Manually attempt fallback delivery via a specific channel.
@@ -207,7 +209,9 @@ async def retry_fallback_delivery(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
 
     updated = await repository.get_by_id(message_id)
+    if updated is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="message not found")
     return MessageResponse.from_record(updated)

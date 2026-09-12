@@ -20,9 +20,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     This also manages the background scheduler for message processing.
     """
     # Start the background scheduler
-    settings = get_settings()
-    session_factory = SessionFactory()
-    scheduler = MessageScheduler(session_factory, app.state.channels)
+    scheduler = MessageScheduler(SessionFactory, app.state.channels)
     scheduler_task = asyncio.create_task(scheduler.start())
     
     try:

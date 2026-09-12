@@ -67,10 +67,10 @@ class TelegramChannel(Channel):
         # Stub: in production, call Telegram API
         # For now, we'll simulate a successful send
         logger.info(
-            "Telegram send",
-            channel="telegram",
-            recipient=recipient,
-            content_length=len(content),
+            "Telegram send channel=%s recipient=%s content_length=%d",
+            self.channel_name,
+            recipient,
+            len(content),
         )
 
         return SendResult(

@@ -3,6 +3,18 @@ from app.domain.message_state import MessageState
 from app.schemas.message import CreateMessageRequest, MessageResponse
 
 
+def test_message_router_exposes_acknowledgement_endpoint() -> None:
+    from app.api.routes.messages import router
+
+    routes = {
+        (method, route.path)
+        for route in router.routes
+        for method in route.methods or set()
+    }
+
+    assert ("POST", "/messages/{message_id}/acknowledge") in routes
+
+
 def test_create_message_request_validates_policy_fields() -> None:
     payload = CreateMessageRequest(
         sender="ops@example.com",

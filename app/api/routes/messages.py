@@ -42,3 +42,25 @@ async def get_message(
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="message not found")
     return MessageResponse.from_record(record)
+
+
+@router.post("/{message_id}/acknowledge", response_model=MessageResponse)
+async def acknowledge_message(
+    message_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> MessageResponse:
+    """Record an acknowledgement and return the updated message."""
+    channels = request.app.state.channels
+    service = MessageService(session, channels)
+    record = await service.get_message(message_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="message not found")
+
+    await service.acknowledge_message(message_id)
+    await session.commit()
+
+    updated = await service.get_message(message_id)
+    if updated is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="message not found")
+    return MessageResponse.from_record(updated)

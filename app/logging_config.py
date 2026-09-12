@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -60,7 +60,7 @@ def get_logger(name: str) -> structlog.BoundLogger:
     Returns:
         A structlog-wrapped logger with context binding support
     """
-    return structlog.get_logger(name)
+    return cast(structlog.BoundLogger, structlog.get_logger(name))
 
 
 class LogContextMiddleware:

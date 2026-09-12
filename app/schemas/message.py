@@ -9,6 +9,10 @@ from app.domain.message import MessageRecord
 from app.domain.message_state import MessageState
 
 
+def default_fallback_channels() -> list[Literal["sms"]]:
+    return ["sms"]
+
+
 class CreateMessageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -19,7 +23,7 @@ class CreateMessageRequest(BaseModel):
     primary_channel: Literal["telegram", "sms"] = "telegram"
     acknowledgement_condition: Literal["EXPLICIT_ACK"] = "EXPLICIT_ACK"
     acknowledgement_deadline_seconds: int = Field(..., ge=1, le=86400)
-    fallback_channels: list[Literal["sms"]] = Field(default_factory=lambda: ["sms"])
+    fallback_channels: list[Literal["sms"]] = Field(default_factory=default_fallback_channels)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=128)
 
 

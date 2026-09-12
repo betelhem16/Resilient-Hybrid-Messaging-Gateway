@@ -12,11 +12,10 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.channels.registry import ChannelRegistry
 from app.domain.message_state import MessageState
-from app.infrastructure.database import SessionFactory
 from app.repositories.message_repository import MessageRepository
 from app.workers.processor import MessageProcessor
 
@@ -35,7 +34,7 @@ class MessageScheduler:
 
     def __init__(
         self,
-        session_factory: SessionFactory,
+        session_factory: async_sessionmaker[AsyncSession],
         channels: ChannelRegistry,
         deadline_check_interval: int = 10,
         fallback_attempt_interval: int = 15,
