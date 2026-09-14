@@ -6,8 +6,8 @@ what delay strategies to use between attempts.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,7 @@ class RetryPolicy:
             Datetime when the next retry should be attempted
         """
         if now is None:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
         # Calculate backoff: initial_backoff * (multiplier ^ retry_count)
         delay_seconds = self.initial_backoff_seconds * (self.backoff_multiplier ** retry_count)
