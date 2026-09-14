@@ -6,14 +6,29 @@ from app.domain.message_state import MessageState, can_record_acknowledgement, t
 def test_valid_transition_sequence() -> None:
     assert transition_state(MessageState.PENDING, MessageState.QUEUED) == MessageState.QUEUED
     assert transition_state(MessageState.QUEUED, MessageState.SENDING) == MessageState.SENDING
-    assert transition_state(MessageState.SENDING, MessageState.SENT_TO_CHANNEL) == MessageState.SENT_TO_CHANNEL
-    assert transition_state(MessageState.SENT_TO_CHANNEL, MessageState.ACKNOWLEDGED) == MessageState.ACKNOWLEDGED
+    assert (
+        transition_state(MessageState.SENDING, MessageState.SENT_TO_CHANNEL)
+        == MessageState.SENT_TO_CHANNEL
+    )
+    assert (
+        transition_state(MessageState.SENT_TO_CHANNEL, MessageState.ACKNOWLEDGED)
+        == MessageState.ACKNOWLEDGED
+    )
 
 
 def test_escalation_sequence_is_valid() -> None:
-    assert transition_state(MessageState.SENT_TO_CHANNEL, MessageState.ESCALATION_PENDING) == MessageState.ESCALATION_PENDING
-    assert transition_state(MessageState.ESCALATION_PENDING, MessageState.FALLBACK_SENDING) == MessageState.FALLBACK_SENDING
-    assert transition_state(MessageState.FALLBACK_SENDING, MessageState.FALLBACK_DELIVERED) == MessageState.FALLBACK_DELIVERED
+    assert (
+        transition_state(MessageState.SENT_TO_CHANNEL, MessageState.ESCALATION_PENDING)
+        == MessageState.ESCALATION_PENDING
+    )
+    assert (
+        transition_state(MessageState.ESCALATION_PENDING, MessageState.FALLBACK_SENDING)
+        == MessageState.FALLBACK_SENDING
+    )
+    assert (
+        transition_state(MessageState.FALLBACK_SENDING, MessageState.FALLBACK_DELIVERED)
+        == MessageState.FALLBACK_DELIVERED
+    )
 
 
 def test_invalid_transition_is_rejected() -> None:
