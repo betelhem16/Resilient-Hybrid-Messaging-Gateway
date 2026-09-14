@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +36,7 @@ class EventRecorder:
             message_id=message_id,
             event_type=event_type,
             payload=payload or {},
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         self.session.add(event)
         await self.session.flush()
