@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, Text, func
-from sqlalchemy.orm import Mapped, DeclarativeBase, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from app.domain.message_state import MessageState
 
@@ -48,7 +48,7 @@ class Message(Base):
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    events: Mapped[list["MessageEvent"]] = relationship(
+    events: Mapped[list[MessageEvent]] = relationship(
         back_populates="message",
         cascade="all, delete-orphan",
         order_by="MessageEvent.created_at.asc()",
