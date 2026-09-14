@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.domain.message_event import MessageEventRecord
 from app.schemas.message_event import MessageEventResponse
@@ -10,7 +10,7 @@ def test_message_event_response_serializes_payload() -> None:
         message_id="msg-123",
         event_type="MESSAGE_CREATED",
         payload={"state": "PENDING", "sender": "ops@example.com"},
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
     response = MessageEventResponse.model_validate(event)
