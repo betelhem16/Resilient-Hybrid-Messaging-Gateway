@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -161,20 +161,23 @@ class MessageScheduler:
 
     async def _attempt_retries_once(self) -> None:
         """Run one iteration of retry attempts."""
-        from datetime import datetime, timezone
 
         async with self.session_factory() as session:
             try:
                 repository = MessageRepository(session)
                 processor = MessageProcessor(session, self.channels)
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
 
                 # Find all messages due for retry
                 due_for_retry = await repository.list_due_for_retry(now)
 
                 for message in due_for_retry:
                     if message.current_state == MessageState.QUEUED:
-                        logger.info("Retrying message %s (attempt %d)", message.id, message.retry_count + 1)
+                        logger.info(
+                            "Retrying message %s (attempt %d)",
+                            message.id,
+                            message.retry_count + 1,
+                        )
                         await processor.attempt_delivery(message.id)
                     elif message.current_state == MessageState.ESCALATION_DEFERRED:
                         logger.info(
