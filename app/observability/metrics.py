@@ -7,14 +7,14 @@ and system health that can be exposed via prometheus or other monitoring systems
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.message_state import MessageState
-from app.infrastructure.models import Message, MessageEvent
+from app.infrastructure.models import Message
 
 logger = logging.getLogger(__name__)
 
@@ -108,13 +108,17 @@ class MetricsCollector:
 
     async def _calculate_24h_metrics(self, metrics: MessageMetrics) -> None:
         """Calculate delivery success rate for the last 24 hours."""
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        cutoff = datetime.now(UTC) - timedelta(hours=24)
 
         # Count successful deliveries (SENT_TO_CHANNEL or acknowledged)
         success_result = await self.session.execute(
             select(func.count(Message.id)).where(
                 Message.current_state.in_(
-                    [MessageState.SENT_TO_CHANNEL, MessageState.ACKNOWLEDGED, MessageState.FALLBACK_DELIVERED]
+                    [
+                        MessageState.SENT_TO_CHANNEL,
+                        MessageState.ACKNOWLEDGED,
+                        MessageState.FALLBACK_DELIVERED,
+                    ]
                 ),
                 Message.created_at >= cutoff,
             )
@@ -189,7 +193,7 @@ class HealthChecker:
         - The database is accessible
         - There are no excessive dead-letter messages (> 100)
         """
-        health = SystemHealth(last_check_at=datetime.now(timezone.utc))
+        health = SystemHealth(last_check_at=datetime.now(UTC))
 
         try:
             # Check database connectivity
@@ -203,12 +207,16 @@ class HealthChecker:
             health.messages_pending = pending_result.scalar() or 0
 
             escalation_pending_result = await self.session.execute(
-                select(func.count(Message.id)).where(Message.current_state == MessageState.ESCALATION_PENDING)
+                select(func.count(Message.id)).where(
+                    Message.current_state == MessageState.ESCALATION_PENDING
+                )
             )
             health.messages_escalation_pending = escalation_pending_result.scalar() or 0
 
             dead_letter_result = await self.session.execute(
-                select(func.count(Message.id)).where(Message.current_state == MessageState.DEAD_LETTER)
+                select(func.count(Message.id)).where(
+                    Message.current_state == MessageState.DEAD_LETTER
+                )
             )
             health.messages_dead_letter = dead_letter_result.scalar() or 0
 
@@ -218,7 +226,9 @@ class HealthChecker:
                 health.is_healthy = False
 
             if health.messages_escalation_pending > 500:
-                health.warnings.append(f"High escalation pending count: {health.messages_escalation_pending}")
+                health.warnings.append(
+                    f"High escalation pending count: {health.messages_escalation_pending}"
+                )
 
         except Exception as exc:
             logger.error("Health check failed: %s", exc)
