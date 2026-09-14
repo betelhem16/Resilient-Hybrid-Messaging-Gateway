@@ -7,6 +7,9 @@ and should be gated behind authentication in production.
 
 from __future__ import annotations
 
+from datetime import UTC
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,9 +21,10 @@ from app.infrastructure.models import Message, MessageEvent
 from app.repositories.message_repository import MessageRepository
 from app.schemas.message import MessageResponse
 
+
 async def require_admin_access(
     request: Request,
-    x_admin_api_key: str | None = Header(default=None),
+    x_admin_api_key: Annotated[str | None, Header(alias="x-admin-api-key")] = None,
 ) -> None:
     """Require the configured admin key in production and when configured."""
     settings: Settings = request.app.state.settings
@@ -45,9 +49,9 @@ router = APIRouter(
 
 @router.get("/messages", status_code=status.HTTP_200_OK)
 async def list_messages(
-    state: str | None = Query(None, description="Filter by message state"),
-    limit: int = Query(20, ge=1, le=100),
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    state: Annotated[str | None, Query(description="Filter by message state")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> list[MessageResponse]:
     """List messages, optionally filtered by state.
 
@@ -64,11 +68,11 @@ async def list_messages(
         try:
             state_enum = MessageState(state)
             query = query.where(Message.current_state == state_enum)
-        except ValueError:
+        except ValueError as err:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid state: {state}",
-            )
+            ) from err
 
     query = query.order_by(Message.created_at.desc()).limit(limit)
 
@@ -82,8 +86,8 @@ async def list_messages(
 @router.get("/messages/{message_id}/events", status_code=status.HTTP_200_OK)
 async def get_message_events(
     message_id: str,
-    limit: int = Query(50, ge=1, le=500),
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=500)] = 50,
 ) -> list[dict[str, object]]:
     """Retrieve all events for a message.
 
@@ -124,7 +128,9 @@ async def get_message_events(
 
 
 @router.get("/stats", status_code=status.HTTP_200_OK)
-async def get_message_stats(session: AsyncSession = Depends(get_session)) -> dict[str, int]:
+async def get_message_stats(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, int]:
     """Get statistics on message states.
 
     Returns a count of messages in each state.
@@ -145,7 +151,7 @@ async def get_message_stats(session: AsyncSession = Depends(get_session)) -> dic
 async def manually_escalate_message(
     message_id: str,
     request: Request,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> MessageResponse:
     """Manually escalate a message to fallback delivery.
 
@@ -157,8 +163,9 @@ async def manually_escalate_message(
     Returns:
         Updated message record
     """
-    from datetime import datetime, timezone
-    from app.domain.state_machine import apply_transition, StateTransitionError
+    from datetime import datetime
+
+    from app.domain.state_machine import StateTransitionError
     from app.workers.processor import MessageProcessor
 
     repository = MessageRepository(session)
@@ -169,13 +176,15 @@ async def manually_escalate_message(
     if message.current_state != MessageState.SENT_TO_CHANNEL:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot escalate from state {message.current_state.value}",
+            detail=(
+                f"Cannot escalate from state {message.current_state.value}"
+            ),
         )
 
     # Trigger escalation
     channels = request.app.state.channels
     processor = MessageProcessor(session, channels)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     try:
         await processor._escalate_message(message, now)
@@ -196,8 +205,8 @@ async def manually_escalate_message(
 async def retry_fallback_delivery(
     message_id: str,
     request: Request,
-    channel: str = Query(..., description="Fallback channel to attempt"),
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    channel: Annotated[str, Query(description="Fallback channel to attempt")] = ..., 
 ) -> MessageResponse:
     """Manually attempt fallback delivery via a specific channel.
 
@@ -218,7 +227,10 @@ async def retry_fallback_delivery(
     if message.current_state != MessageState.ESCALATION_PENDING:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Message must be in ESCALATION_PENDING state, currently {message.current_state.value}",
+            detail=(
+                "Message must be in ESCALATION_PENDING state, currently "
+                f"{message.current_state.value}"
+            ),
         )
 
     # Attempt the fallback
