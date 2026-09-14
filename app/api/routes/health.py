@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database import get_session
 from app.infrastructure.redis_client import redis_client
-from app.observability.metrics import MetricsCollector, HealthChecker
+from app.observability.metrics import HealthChecker, MetricsCollector
 
 router = APIRouter(tags=["health"])
 
@@ -23,7 +23,9 @@ async def health() -> dict[str, str]:
 
 
 @router.get("/ready")
-async def ready(session: AsyncSession = Depends(get_session)) -> Any:
+async def ready(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> Any:
     """Readiness: can this process serve traffic right now?
 
     Checks every dependency needed to accept a message. A failure means
@@ -49,7 +51,9 @@ async def ready(session: AsyncSession = Depends(get_session)) -> Any:
 
 
 @router.get("/metrics")
-async def get_metrics(session: AsyncSession = Depends(get_session)) -> dict[str, object]:
+async def get_metrics(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, object]:
     """Get system metrics and statistics.
 
     Returns information about message processing rates, delivery success,
@@ -72,7 +76,9 @@ async def get_metrics(session: AsyncSession = Depends(get_session)) -> dict[str,
 
 
 @router.get("/health/detailed")
-async def get_detailed_health(session: AsyncSession = Depends(get_session)) -> dict[str, object]:
+async def get_detailed_health(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, object]:
     """Get detailed system health status.
 
     Includes dependency checks and counts of messages in concerning states.
