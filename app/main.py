@@ -1,15 +1,15 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-import asyncio
 
 from fastapi import FastAPI
 
 from app.api.routes import health, messages
 from app.channels.registry import create_registry
 from app.config import get_settings
-from app.infrastructure.database import engine, SessionFactory
+from app.infrastructure.database import SessionFactory, engine
 from app.infrastructure.redis_client import redis_client
-from app.logging_config import configure_logging, LogContextMiddleware
+from app.logging_config import LogContextMiddleware, configure_logging
 from app.workers.scheduler import MessageScheduler
 
 
@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await scheduler.stop()
         try:
             await asyncio.wait_for(scheduler_task, timeout=5.0)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             scheduler_task.cancel()
         
         # Close connection pools
