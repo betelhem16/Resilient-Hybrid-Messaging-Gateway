@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.channels.registry import ChannelRegistry
 from app.domain.message import MessagePolicy, MessageRecord
 from app.domain.message_state import MessageState
-from app.domain.state_machine import apply_transition
 from app.repositories.message_repository import MessageRepository
 from app.schemas.message import CreateMessageRequest
 from app.workers.processor import MessageProcessor
@@ -32,7 +31,7 @@ class MessageService:
                 return existing
 
         message_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         record = MessageRecord(
             id=message_id,
