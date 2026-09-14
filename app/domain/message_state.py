@@ -70,4 +70,9 @@ def can_record_acknowledgement(current: MessageState) -> bool:
     the timestamp field and leave the current_state to reflect the delivery policy's
     current stage. This keeps the state machine explicit and avoids state explosion.
     """
-    return current not in {MessageState.ACKNOWLEDGED, MessageState.FALLBACK_DELIVERED, MessageState.FAILED, MessageState.DEAD_LETTER}
+    return current not in {
+        MessageState.ACKNOWLEDGED,
+        MessageState.FALLBACK_DELIVERED,
+        MessageState.FAILED,
+        MessageState.DEAD_LETTER,
+    }
