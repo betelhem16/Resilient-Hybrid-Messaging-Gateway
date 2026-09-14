@@ -1,13 +1,12 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
-from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.channels.registry import ChannelRegistry
 from app.domain.message_state import MessageState
-from app.repositories.message_repository import MessageRepository
 from app.schemas.message import CreateMessageRequest
 from app.services.message_service import MessageService
-from app.workers.scheduler import MessageScheduler
 from tests.test_message_processor import MockChannel
 
 
@@ -45,7 +44,7 @@ async def test_scheduler_checks_deadlines_periodically(test_session: AsyncSessio
     assert record.current_state == MessageState.SENT_TO_CHANNEL
 
     # Force deadline into the past
-    record.ack_deadline_at = datetime.now(timezone.utc) - timedelta(seconds=5)
+    record.ack_deadline_at = datetime.now(UTC) - timedelta(seconds=5)
     await service.repository.update(record)
     await test_session.commit()
 
@@ -94,7 +93,7 @@ async def test_scheduler_attempts_fallback_for_escalated_messages(
     assert record.current_state == MessageState.SENT_TO_CHANNEL
 
     # Force deadline to trigger escalation
-    record.ack_deadline_at = datetime.now(timezone.utc) - timedelta(seconds=5)
+    record.ack_deadline_at = datetime.now(UTC) - timedelta(seconds=5)
     await service.repository.update(record)
     await test_session.commit()
 
