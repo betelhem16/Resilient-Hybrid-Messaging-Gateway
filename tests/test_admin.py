@@ -1,14 +1,15 @@
 """Tests for admin and debugging endpoints."""
 
-import pytest
-from datetime import datetime, timezone, timedelta
-from httpx import AsyncClient
+from datetime import UTC, datetime
 from types import SimpleNamespace
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException
 
-from app.channels.registry import ChannelRegistry
+import pytest
+from fastapi import HTTPException
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.routes.admin import require_admin_access
+from app.channels.registry import ChannelRegistry
 from app.domain.message_state import MessageState
 from app.main import create_app
 from app.schemas.message import CreateMessageRequest
@@ -66,7 +67,7 @@ async def test_admin_list_messages(test_session: AsyncSession) -> None:
             fallback_channels=[],
             priority="NORMAL",
         )
-        record = await service.create_message(request)
+        await service.create_message(request)
         await test_session.commit()
 
 
@@ -98,6 +99,7 @@ async def test_admin_get_message_events(test_session: AsyncSession) -> None:
 
     # Fetch events via repository
     from sqlalchemy import select
+
     from app.infrastructure.models import MessageEvent
 
     result = await test_session.execute(
@@ -130,7 +132,7 @@ async def test_admin_get_message_stats(test_session: AsyncSession) -> None:
         priority="NORMAL",
     )
 
-    record = await service.create_message(request)
+    await service.create_message(request)
     await test_session.commit()
 
     # At this point, one message should be in PENDING state
@@ -173,11 +175,10 @@ async def test_admin_manually_escalate_message(test_session: AsyncSession) -> No
     assert message.current_state == MessageState.SENT_TO_CHANNEL
 
     # Manually escalate
-    from datetime import datetime, timezone
     from app.workers.processor import MessageProcessor
 
     processor = MessageProcessor(test_session, registry)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     await processor._escalate_message(message, now)
     await test_session.commit()
 
