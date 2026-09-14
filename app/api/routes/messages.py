@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/messages", tags=["messages"])
 async def create_message(
     payload: CreateMessageRequest,
     request: Request,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> MessageResponse:
     channels = request.app.state.channels
     service = MessageService(session, channels)
@@ -35,7 +35,7 @@ async def create_message(
 async def get_message(
     message_id: str,
     request: Request,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> MessageResponse:
     channels = request.app.state.channels
     service = MessageService(session, channels)
@@ -49,7 +49,7 @@ async def get_message(
 async def acknowledge_message(
     message_id: str,
     request: Request,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> MessageResponse:
     """Record an acknowledgement and return the updated message."""
     channels = request.app.state.channels
