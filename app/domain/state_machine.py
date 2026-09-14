@@ -10,7 +10,12 @@ class StateTransitionError(ValueError):
     pass
 
 
-def apply_transition(message: MessageRecord, next_state: MessageState, *, now: datetime | None = None) -> MessageRecord:
+def apply_transition(
+    message: MessageRecord,
+    next_state: MessageState,
+    *,
+    now: datetime | None = None,
+) -> MessageRecord:
     """Guarded state progression for the message lifecycle.
 
     We intentionally keep this as a pure domain function: no database access, no
@@ -40,7 +45,9 @@ def record_acknowledgement(message: MessageRecord, *, now: datetime | None = Non
     ignored based on the current state's transition guard.
     """
     if not can_record_acknowledgement(message.current_state):
-        raise StateTransitionError(f"Ack cannot be recorded while state is {message.current_state.value}")
+        raise StateTransitionError(
+            f"Ack cannot be recorded while state is {message.current_state.value}"
+        )
     message.acknowledged_at = now or datetime.utcnow()
     message.updated_at = now or datetime.utcnow()
     return message
