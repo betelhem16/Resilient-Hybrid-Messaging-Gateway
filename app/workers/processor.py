@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,7 +9,7 @@ from app.channels.registry import ChannelRegistry
 from app.domain.message import MessageRecord
 from app.domain.message_state import MessageState
 from app.domain.retry_policy import FALLBACK_RETRY_POLICY
-from app.domain.state_machine import apply_transition, StateTransitionError
+from app.domain.state_machine import StateTransitionError, apply_transition
 from app.repositories.message_repository import MessageRepository
 from app.workers.events import EventRecorder, EventType
 
@@ -52,7 +51,7 @@ class MessageProcessor:
             logger.error(f"Message {message_id} not found")
             return
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Transition: PENDING → QUEUED
         try:
@@ -83,7 +82,7 @@ class MessageProcessor:
             logger.error(f"Message {message_id} not found")
             return
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         channel_name = message.policy.primary_channel
 
         # Transition: QUEUED → SENDING
@@ -188,7 +187,7 @@ class MessageProcessor:
         In production, this would use SELECT ... FOR UPDATE SKIP LOCKED
         to avoid thundering herd issues.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         due_messages = await self.repository.list_due_for_escalation(now)
 
         for message in due_messages:
@@ -211,7 +210,7 @@ class MessageProcessor:
             logger.error(f"Message {message_id} not found")
             return
 
-        now = acknowledged_at or datetime.now(timezone.utc)
+        now = acknowledged_at or datetime.now(UTC)
 
         if message.current_state == MessageState.SENT_TO_CHANNEL:
             try:
@@ -300,7 +299,7 @@ class MessageProcessor:
             )
             return
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Transition: ESCALATION_PENDING → FALLBACK_SENDING
         try:
@@ -320,7 +319,11 @@ class MessageProcessor:
         channel = self.channels.get(channel_name)
         if channel is None:
             logger.error(f"Fallback channel '{channel_name}' not configured")
-            await self._mark_dead_letter(message, f"fallback channel '{channel_name}' not available", now)
+            await self._mark_dead_letter(
+                message,
+                f"fallback channel '{channel_name}' not available",
+                now,
+            )
             return
 
         # Attempt the send
@@ -328,7 +331,11 @@ class MessageProcessor:
         result = await channel.send(
             recipient=message.recipient,
             content=message.content,
-            metadata={"message_id": message_id, "priority": message.policy.priority, "is_fallback": True},
+            metadata={
+                "message_id": message_id,
+                "priority": message.policy.priority,
+                "is_fallback": True,
+            },
         )
 
         await self.events.record(
