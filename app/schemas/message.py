@@ -78,7 +78,7 @@ class MessageResponse(BaseModel):
         return value
 
     @classmethod
-    def from_record(cls, record: MessageRecord) -> "MessageResponse":
+    def from_record(cls, record: MessageRecord) -> MessageResponse:
         return cls(
             id=record.id,
             sender=record.sender,
