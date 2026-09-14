@@ -6,7 +6,7 @@ escalation, and fallback handling.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -226,7 +226,7 @@ async def test_late_acknowledgement_recorded(test_session: AsyncSession) -> None
     # Escalate the message
     escalated = await service.get_message(record.id)
     assert escalated is not None
-    await service.processor._escalate_message(escalated, datetime.now(timezone.utc))
+    await service.processor._escalate_message(escalated, datetime.now(UTC))
     await test_session.commit()
 
     # Verify it's now in ESCALATION_PENDING
@@ -281,6 +281,7 @@ async def test_event_recording(test_session: AsyncSession) -> None:
 
     # Fetch events
     from sqlalchemy import select
+
     from app.infrastructure.models import MessageEvent
 
     result = await test_session.execute(
@@ -298,7 +299,9 @@ async def test_event_recording(test_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_deadline_check_escalates_when_ack_deadline_passes(test_session: AsyncSession) -> None:
+async def test_deadline_check_escalates_when_ack_deadline_passes(
+    test_session: AsyncSession,
+) -> None:
     """Messages past their deadline should be escalated when no ack has arrived."""
     registry = ChannelRegistry()
     mock_telegram = MockChannel("telegram", always_succeed=True)
@@ -332,7 +335,7 @@ async def test_deadline_check_escalates_when_ack_deadline_passes(test_session: A
     assert record.current_state == MessageState.SENT_TO_CHANNEL
 
     # Force the deadline into the past so the processor sees it as expired.
-    record.ack_deadline_at = datetime.now(timezone.utc) - timedelta(seconds=5)
+    record.ack_deadline_at = datetime.now(UTC) - timedelta(seconds=5)
     await service.repository.update(record)
     await test_session.commit()
 
@@ -382,10 +385,10 @@ async def test_failed_fallback_schedules_retry_and_recovers(test_session: AsyncS
     assert deferred.current_state == MessageState.ESCALATION_DEFERRED
     assert deferred.retry_count == 1
     assert deferred.next_retry_at is not None
-    assert deferred.next_retry_at > datetime.now(timezone.utc).replace(tzinfo=None)
+    assert deferred.next_retry_at > datetime.now(UTC).replace(tzinfo=None)
 
     # Simulate the scheduler making the deferred message eligible again.
-    await service.processor._escalate_message(deferred, datetime.now(timezone.utc))
+    await service.processor._escalate_message(deferred, datetime.now(UTC))
     mock_sms.always_succeed = True
     await service.processor.attempt_fallback(record.id, "sms")
     await test_session.commit()
