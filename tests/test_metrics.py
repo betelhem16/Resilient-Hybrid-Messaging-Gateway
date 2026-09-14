@@ -1,12 +1,12 @@
 """Tests for metrics and health monitoring endpoints."""
 
+
 import pytest
-from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.channels.registry import ChannelRegistry
 from app.domain.message_state import MessageState
-from app.observability.metrics import MetricsCollector, HealthChecker, MessageMetrics
+from app.observability.metrics import HealthChecker, MetricsCollector
 from app.schemas.message import CreateMessageRequest
 from app.services.message_service import MessageService
 from tests.test_message_processor import MockChannel
@@ -33,7 +33,7 @@ async def test_metrics_collector_counts_messages_by_state(test_session: AsyncSes
             fallback_channels=[],
             priority="NORMAL",
         )
-        record = await service.create_message(request)
+        await service.create_message(request)
         await test_session.commit()
 
     # Collect metrics
@@ -116,7 +116,7 @@ async def test_health_checker_reports_message_counts(test_session: AsyncSession)
             fallback_channels=[],
             priority="NORMAL",
         )
-        record = await service.create_message(request)
+        await service.create_message(request)
         await test_session.commit()
 
     # Check health
